@@ -1,0 +1,5 @@
+#
+# Component makefile.
+#
+COMPONENT_ADD_INCLUDEDIRS := .
+#CFLAGS+= -DCCS811_DEBUG_LEVEL_2
