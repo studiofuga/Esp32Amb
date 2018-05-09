@@ -12,12 +12,12 @@
 #include "esp_bt_main.h"
 #include "esp_bt_main.h"
 
-#define GATTS_TABLE_TAG "SEC_GATTS_DEMO"
+#define GATTS_TABLE_TAG "SEC_GATTS"
 
 #define HEART_PROFILE_NUM                         1
 #define HEART_PROFILE_APP_IDX                     0
 #define ESP_HEART_RATE_APP_ID                     0x55
-#define EXCAMPLE_DEVICE_NAME                      "ESP_BLE_SECURITY"
+#define EXCAMPLE_DEVICE_NAME                      "AmbEsp32"
 #define HEART_RATE_SVC_INST_ID                    0
 
 #define GATTS_DEMO_CHAR_VAL_LEN_MAX               0x40
