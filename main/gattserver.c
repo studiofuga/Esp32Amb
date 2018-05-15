@@ -12,8 +12,61 @@
 #include "esp_bt_main.h"
 #include "esp_bt_main.h"
 
+#include "string.h"
+
 #define GATTS_TABLE_TAG "SEC_GATTS"
 
+#define SRV_APP_ID                     0x55
+#define EXCAMPLE_DEVICE_NAME                      "AmbEsp32"
+
+#define ADV_CONFIG_FLAG                           (1 << 0)
+#define SCAN_RSP_CONFIG_FLAG                      (1 << 1)
+
+static uint8_t adv_config_done = 0;
+
+static uint8_t sec_service_uuid[16] = {
+        /* LSB <--------------------------------------------------------------------------------> MSB */
+        //first uuid, 16bit, [12],[13] is the value
+        0xfb, 0x34, 0x9b, 0x5f, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00, 0x00, 0x18, 0x0D, 0x00, 0x00,
+};
+
+static uint8_t test_manufacturer[3]={'E', 'S', 'P'};
+
+static esp_ble_adv_data_t srv_adv_config = {
+        .set_scan_rsp = false,
+        .include_txpower = true,
+        .min_interval = 0x100,
+        .max_interval = 0x100,
+        .appearance = 0x00,
+        .manufacturer_len = 0, //TEST_MANUFACTURER_DATA_LEN,
+        .p_manufacturer_data =  NULL, //&test_manufacturer[0],
+        .service_data_len = 0,
+        .p_service_data = NULL,
+        .service_uuid_len = sizeof(sec_service_uuid),
+        .p_service_uuid = sec_service_uuid,
+        .flag = (ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT),
+};
+// config scan response data
+static esp_ble_adv_data_t srv_scan_rsp_config = {
+        .set_scan_rsp = true,
+        .include_name = true,
+        .manufacturer_len = sizeof(test_manufacturer),
+        .p_manufacturer_data = test_manufacturer,
+};
+
+static esp_ble_adv_params_t srv_adv_params = {
+        .adv_int_min        = 0x100,
+        .adv_int_max        = 0x100,
+        .adv_type           = ADV_TYPE_IND,
+        .own_addr_type      = BLE_ADDR_TYPE_RANDOM,
+        .channel_map        = ADV_CHNL_ALL,
+        .adv_filter_policy = ADV_FILTER_ALLOW_SCAN_ANY_CON_ANY,
+};
+
+
+//------------------------------
+
+#if 0
 #define HEART_PROFILE_NUM                         1
 #define HEART_PROFILE_APP_IDX                     0
 #define ESP_HEART_RATE_APP_ID                     0x55
@@ -214,6 +267,10 @@ static const esp_gatts_attr_db_t heart_rate_gatt_db[HRS_IDX_NB] =
     {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&heart_rate_ctrl_point, ESP_GATT_PERM_WRITE_ENCRYPTED|ESP_GATT_PERM_READ_ENCRYPTED,
       sizeof(uint8_t), sizeof(heart_ctrl_point), (uint8_t *)heart_ctrl_point}},
 };
+#endif
+
+
+
 
 static char *esp_key_type_to_str(esp_ble_key_type_t key_type)
 {
@@ -292,13 +349,13 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
     case ESP_GAP_BLE_SCAN_RSP_DATA_SET_COMPLETE_EVT:
         adv_config_done &= (~SCAN_RSP_CONFIG_FLAG);
         if (adv_config_done == 0){
-            esp_ble_gap_start_advertising(&heart_rate_adv_params);
+            esp_ble_gap_start_advertising(&srv_adv_params);
         }
         break;
     case ESP_GAP_BLE_ADV_DATA_SET_COMPLETE_EVT:
         adv_config_done &= (~ADV_CONFIG_FLAG);
         if (adv_config_done == 0){
-            esp_ble_gap_start_advertising(&heart_rate_adv_params);
+            esp_ble_gap_start_advertising(&srv_adv_params);
         }
         break;
     case ESP_GAP_BLE_ADV_START_COMPLETE_EVT:
@@ -365,14 +422,14 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
             break;
         }
 
-        esp_err_t ret = esp_ble_gap_config_adv_data(&heart_rate_adv_config);
+        esp_err_t ret = esp_ble_gap_config_adv_data(&srv_adv_config);
         if (ret){
             ESP_LOGE(GATTS_TABLE_TAG, "config adv data failed, error code = %x", ret);
         }else{
             adv_config_done |= ADV_CONFIG_FLAG;
         }
 
-        ret = esp_ble_gap_config_adv_data(&heart_rate_scan_rsp_config);
+        ret = esp_ble_gap_config_adv_data(&srv_scan_rsp_config);
         if (ret){
             ESP_LOGE(GATTS_TABLE_TAG, "config adv data failed, error code = %x", ret);
         }else{
@@ -389,6 +446,7 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
 static void gatts_profile_event_handler(esp_gatts_cb_event_t event,
                                         esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param)
 {
+#if 0
     ESP_LOGV(GATTS_TABLE_TAG, "event = %x\n",event);
     switch (event) {
         case ESP_GATTS_REG_EVT:
@@ -458,12 +516,14 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event,
         default:
            break;
     }
+#endif
 }
 
 
 static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if,
                                 esp_ble_gatts_cb_param_t *param)
 {
+#if 0
     /* If event is register event, store the gatts_if for each profile */
     if (event == ESP_GATTS_REG_EVT) {
         if (param->reg.status == ESP_GATT_OK) {
@@ -487,6 +547,7 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
             }
         }
     } while (0);
+#endif
 }
 
 void gattserver_init()
@@ -537,7 +598,7 @@ void gattserver_init()
         ESP_LOGE(GATTS_TABLE_TAG, "gap register error, error code = %x", ret);
         return;
     }
-    ret = esp_ble_gatts_app_register(ESP_HEART_RATE_APP_ID);
+    ret = esp_ble_gatts_app_register(SRV_APP_ID);
     if (ret){
         ESP_LOGE(GATTS_TABLE_TAG, "gatts app register error, error code = %x", ret);
         return;
