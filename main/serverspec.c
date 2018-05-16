@@ -15,6 +15,9 @@
 
 #include "string.h"
 
+#include "gattserver.h"
+#include "serverspec.h"
+
 
 static uint8_t sec_service_uuid[16] = {
         /* LSB <--------------------------------------------------------------------------------> MSB */
@@ -55,4 +58,69 @@ esp_ble_adv_params_t srv_adv_params = {
         .channel_map        = ADV_CHNL_ALL,
         .adv_filter_policy = ADV_FILTER_ALLOW_SCAN_ANY_CON_ANY,
 };
+
+
+
+#define CHAR_DECLARATION_SIZE   (sizeof(uint8_t))
+static const uint16_t primary_service_uuid = ESP_GATT_UUID_PRI_SERVICE;
+static const uint16_t character_declaration_uuid = ESP_GATT_UUID_CHAR_DECLARE;
+static const uint16_t character_client_config_uuid = ESP_GATT_UUID_CHAR_CLIENT_CONFIG;
+static const uint8_t char_prop_notify = ESP_GATT_CHAR_PROP_BIT_NOTIFY;
+static const uint8_t char_prop_read = ESP_GATT_CHAR_PROP_BIT_READ;
+static const uint8_t char_prop_read_write = ESP_GATT_CHAR_PROP_BIT_WRITE|ESP_GATT_CHAR_PROP_BIT_READ;
+
+
+///Attributes 
+/*
+ *  PROFILE ATTRIBUTES variables
+ ****************************************************************************************
+ */
+
+/// Battery Sensor Service
+static const uint16_t battery_svc = ESP_GATT_UUID_BATTERY_SERVICE_SVC;
+static const uint16_t battery_measure_uuid = ESP_GATT_UUID_BATTERY_LEVEL;
+static uint8_t battery_measure_value = 0x00;
+
+/// Temperature
+static const uint16_t ambient_svc = 0xFF00;		// custom
+static const uint16_t ambient_temp_uuid = 0xFF01;	// custom
+static uint8_t ambient_temp_value[2] = { 0x00, 0x00 };
+
+
+/// Full Database Description - Used to add attributes into the database
+const esp_gatts_attr_db_t srv_gatt_db[SRV_ATTR_NB] =
+{
+    // Service Declaration
+    [SRV_BATT_SVC]                    =
+    {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&primary_service_uuid, ESP_GATT_PERM_READ,
+      sizeof(uint16_t), sizeof(battery_svc), (uint8_t *)&battery_svc}},
+
+    // Battery Measurement Characteristic Declaration
+    [SRV_BATT_MEAS_UUID]            =
+    {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&character_declaration_uuid, ESP_GATT_PERM_READ,
+      CHAR_DECLARATION_SIZE,CHAR_DECLARATION_SIZE, (uint8_t *)&char_prop_notify}},
+
+    // Battery Measurement Characteristic Value
+    [SRV_BATT_MEAS_VALUE]             =
+    {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&battery_measure_uuid, ESP_GATT_PERM_READ,
+      1,0, NULL}},	// len of meas = 1
+
+    // Battery Measurement Characteristic - Client Characteristic Configuration Descriptor
+    [SRV_BATT_NTFY_CFG]        =
+    {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&character_client_config_uuid, ESP_GATT_PERM_READ|ESP_GATT_PERM_WRITE,
+      sizeof(uint16_t),sizeof(battery_measure_value), (uint8_t *)&battery_measure_value}},
+};
+
+uint16_t svc_handle_table[SRV_ATTR_NB];
+
+/* One gatt-based profile one app_id and one gatts_if, this array will store the gatts_if returned by ESP_GATTS_REG_EVT */
+struct gatts_profile_inst profile_tab[PROFILE_NUM] = {
+    [PROFILE_APP_IDX] = {
+        .gatts_cb = gatts_profile_event_handler,
+        .gatts_if = ESP_GATT_IF_NONE,       /* Not get the gatt_if, so initial is ESP_GATT_IF_NONE */
+    },
+
+};
+
+#endif
 
