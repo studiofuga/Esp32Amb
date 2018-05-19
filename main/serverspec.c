@@ -121,6 +121,3 @@ struct gatts_profile_inst profile_tab[PROFILE_NUM] = {
     },
 
 };
-
-#endif
-
