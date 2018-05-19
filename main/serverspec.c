@@ -73,12 +73,14 @@ esp_ble_adv_params_t srv_adv_params = {
 // ----- Profile data -------
 
 #define CHAR_DECLARATION_SIZE   (sizeof(uint8_t))
+
 static const uint16_t primary_service_uuid = ESP_GATT_UUID_PRI_SERVICE;
 static const uint16_t character_declaration_uuid = ESP_GATT_UUID_CHAR_DECLARE;
 static const uint16_t character_client_config_uuid = ESP_GATT_UUID_CHAR_CLIENT_CONFIG;
 static const uint8_t char_prop_notify = ESP_GATT_CHAR_PROP_BIT_NOTIFY;
 static const uint8_t char_prop_read = ESP_GATT_CHAR_PROP_BIT_READ;
-static const uint8_t char_prop_read_write = ESP_GATT_CHAR_PROP_BIT_WRITE|ESP_GATT_CHAR_PROP_BIT_READ;
+static const uint8_t char_prop_read_notify = ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_NOTIFY;
+static const uint8_t char_prop_read_write = ESP_GATT_CHAR_PROP_BIT_WRITE | ESP_GATT_CHAR_PROP_BIT_READ;
 
 
 // Variables
@@ -87,14 +89,26 @@ static const uint8_t char_prop_read_write = ESP_GATT_CHAR_PROP_BIT_WRITE|ESP_GAT
 static const uint16_t battery_svc = ESP_GATT_UUID_BATTERY_SERVICE_SVC;
 static const uint16_t battery_measure_uuid = ESP_GATT_UUID_BATTERY_LEVEL;
 static uint8_t battery_measure_value = 0x00;
+static const uint8_t battery_measurement_ccc[2]      = {0x00, 0x00};
 
 /// Temperature
-static const uint16_t ambient_svc = 0xFF00;		// custom
-static const uint16_t ambient_temp_uuid = 0xFF01;	// custom
-static uint8_t ambient_temp_value[2] = { 0x00, 0x00 };
+static const uint16_t ambient_svc = 0xFF00;        // custom
+static const uint16_t ambient_temp_uuid = 0xFF01;    // custom
+static uint8_t ambient_temp_value[2] = {0x00, 0x00};
 
 
 /// Full Database Description - Used to add attributes into the database
+/// The esp_gatts_attr_db_t structure has two members:
+/// The attr_control is the auto-respond parameter which can be set as ESP_GATT_AUTO_RSP to allow the BLE stack to take
+/// care of responding messages when read or write events arrive. The other option is ESP_GATT_RSP_BY_APP which allows
+/// to manually respond to messages using the esp_ble_gatts_send_response() function.
+/// The att_desc is the attribute description.
+/// uint16_t uuid_length;      /*!< UUID length */
+/// uint8_t  *uuid_p;          /*!< UUID value */
+/// uint16_t perm;             /*!< Attribute permission */
+/// uint16_t max_length;       /*!< Maximum length of the element*/
+/// uint16_t length;           /*!< Current length of the element*/
+/// uint8_t  *value;           /*!< Element value array*/
 const esp_gatts_attr_db_t srv_gatt_db[SRV_ATTR_NB] =
         {
                 // Service Declaration
@@ -107,22 +121,24 @@ const esp_gatts_attr_db_t srv_gatt_db[SRV_ATTR_NB] =
                 [SRV_IDX_BATTERY_LEVEL_CHAR]            =
                         {{ESP_GATT_AUTO_RSP},
                          {ESP_UUID_LEN_16, (uint8_t * ) & character_declaration_uuid, ESP_GATT_PERM_READ,
-                                 CHAR_DECLARATION_SIZE, CHAR_DECLARATION_SIZE, (uint8_t * ) & char_prop_notify}},
+                                 CHAR_DECLARATION_SIZE, CHAR_DECLARATION_SIZE, (uint8_t * ) & char_prop_read_notify}},
 
                 // Battery Measurement Characteristic Value
                 [SRV_IDX_BATTERY_LEVEL_VALUE]             =
                         {{ESP_GATT_AUTO_RSP},
                          {ESP_UUID_LEN_16, (uint8_t * ) & battery_measure_uuid, ESP_GATT_PERM_READ,
-                                 1, 0, NULL}},    // len of meas = 1
+                                 sizeof(battery_measure_value), sizeof(battery_measure_value),
+                                 (uint8_t * ) & battery_measure_value}},
 
                 // Battery Measurement Characteristic - Client Characteristic Configuration Descriptor
                 [SRV_IDX_BATTERY_LEVEL_NFYCFG]        =
                         {{ESP_GATT_AUTO_RSP},
                          {ESP_UUID_LEN_16, (uint8_t * ) & character_client_config_uuid,
                                  ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE,
-                                 sizeof(uint16_t), sizeof(battery_measure_value),
-                                 (uint8_t * ) & battery_measure_value}},
+                                 sizeof(uint16_t), sizeof(battery_measurement_ccc),
+                                 (uint8_t * ) & battery_measurement_ccc}},
 
+#if 0
                 // Battery Measurement Characteristic Declaration
                 [SRV_IDX_BATTERY_LEVEL_PRESENTATION_CHAR]            =
                         {{ESP_GATT_AUTO_RSP},
@@ -134,6 +150,7 @@ const esp_gatts_attr_db_t srv_gatt_db[SRV_ATTR_NB] =
                         {{ESP_GATT_AUTO_RSP},
                          {ESP_UUID_LEN_16, (uint8_t * ) & battery_measure_uuid, ESP_GATT_PERM_READ,
                                  1, 0, NULL}},    // len of meas = 1
+#endif
         };
 
 

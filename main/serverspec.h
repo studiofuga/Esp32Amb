@@ -21,8 +21,10 @@ enum BATTERY_SVC_SPEC {
     SRV_IDX_BATTERY_LEVEL_VALUE,     // Battery Level Value
     SRV_IDX_BATTERY_LEVEL_NFYCFG,     // Battery Level Notification configuration
 
+#if 0
     SRV_IDX_BATTERY_LEVEL_PRESENTATION_CHAR,    // Battery Level presentation Characteristics
     SRV_IDX_BATTERY_LEVEL_PRESENTATION_VAL,    // Battery Level presentation Value
+#endif
 
     SRV_ATTR_NB      // Last - Number of Characteristics
 };
